@@ -5,9 +5,9 @@ use core::fmt::Debug;
 use embedded_hal::digital::{OutputPin, PinState};
 use embedded_storage::nor_flash::{ErrorType, NorFlashError, NorFlashErrorKind};
 
-mod w25q32jv;
+mod w25q;
 #[cfg(feature = "async")]
-mod w25q32jv_async;
+mod w25q_async;
 
 pub const PAGE_SIZE: u32 = 256;
 pub const N_PAGES: u32 = 16384;
