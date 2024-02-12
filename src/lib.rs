@@ -5,43 +5,50 @@ use core::fmt::Debug;
 use embedded_hal::digital::{OutputPin, PinState};
 use embedded_storage::nor_flash::{ErrorType, NorFlashError, NorFlashErrorKind};
 
+pub mod models;
 mod w25q;
 #[cfg(feature = "async")]
 mod w25q_async;
 
-pub const PAGE_SIZE: u32 = 256;
-pub const N_PAGES: u32 = 16384;
-pub const CAPACITY: u32 = PAGE_SIZE * N_PAGES;
-
-pub const SECTOR_SIZE: u32 = PAGE_SIZE * 16;
-pub const N_SECTORS: u32 = N_PAGES / 16;
-pub const BLOCK_32K_SIZE: u32 = SECTOR_SIZE * 8;
-pub const N_BLOCKS_32K: u32 = N_SECTORS / 8;
-pub const BLOCK_64K_SIZE: u32 = BLOCK_32K_SIZE * 2;
-pub const N_BLOCKS_64K: u32 = N_BLOCKS_32K / 2;
+use self::models::FlashModel;
 
 /// Low level driver for the w25q32jv flash memory chip.
-pub struct W25q32jv<SPI, HOLD, WP> {
+pub struct W25Q<MODEL, SPI, HOLD, WP> {
+    model: MODEL,
     spi: SPI,
     hold: HOLD,
     wp: WP,
 }
 
-impl<SPI, HOLD, WP> W25q32jv<SPI, HOLD, WP> {
+impl<MODEL, SPI, HOLD, WP> W25Q<MODEL, SPI, HOLD, WP>
+where
+    MODEL: FlashModel,
+{
+    /// Get the model of the flash chip.
+    pub fn model(&self) -> &MODEL {
+        &self.model
+    }
+
     /// Get the capacity of the flash chip in bytes.
     pub fn capacity() -> usize {
-        CAPACITY as usize
+        MODEL::CAPACITY as usize
     }
 }
 
-impl<SPI, S: Debug, P: Debug, HOLD, WP> W25q32jv<SPI, HOLD, WP>
+impl<MODEL, SPI, S: Debug, P: Debug, HOLD, WP> W25Q<MODEL, SPI, HOLD, WP>
 where
+    MODEL: FlashModel,
     SPI: embedded_hal::spi::ErrorType<Error = S>,
     HOLD: OutputPin<Error = P>,
     WP: OutputPin<Error = P>,
 {
-    pub fn new(spi: SPI, hold: HOLD, wp: WP) -> Result<Self, Error<S, P>> {
-        let mut flash = W25q32jv { spi, hold, wp };
+    pub fn new(model: MODEL, spi: SPI, hold: HOLD, wp: WP) -> Result<Self, Error<S, P>> {
+        let mut flash = W25Q {
+            model,
+            spi,
+            hold,
+            wp,
+        };
 
         flash.hold.set_high().map_err(Error::PinError)?;
         flash.wp.set_high().map_err(Error::PinError)?;
@@ -72,8 +79,9 @@ where
     }
 }
 
-impl<SPI, S: Debug, P: Debug, HOLD, WP> ErrorType for W25q32jv<SPI, HOLD, WP>
+impl<MODEL, SPI, S: Debug, P: Debug, HOLD, WP> ErrorType for W25Q<MODEL, SPI, HOLD, WP>
 where
+    MODEL: FlashModel,
     SPI: embedded_hal::spi::ErrorType<Error = S>,
     HOLD: OutputPin<Error = P>,
     WP: OutputPin<Error = P>,

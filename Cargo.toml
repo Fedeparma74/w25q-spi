@@ -1,6 +1,6 @@
 [package]
-name = "w25q32jv"
-version = "0.4.0"
+name = "w25q-spi"
+version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "An embedded-hal driver for the W25Q32JV"
@@ -8,17 +8,13 @@ homepage = "https://github.com/tweedegolf/w25q32jv"
 repository = "https://github.com/tweedegolf/w25q32jv"
 readme = "README.md"
 keywords = ["no_std", "embedded", "flash", "w25q32jv"]
-authors = [
-    "Janno Onink",
-    "Dion Dokter",
-    "Henk Dieter Oordt"
-]
+authors = ["Janno Onink", "Dion Dokter", "Henk Dieter Oordt"]
 
 [dependencies]
-embedded-hal = "1.0.0"
-embedded-storage = "0.3.0"
-embedded-hal-async = { version = "1.0.0", optional = true }
-embedded-storage-async = { version = "0.4.0", optional = true }
+embedded-hal = "1"
+embedded-storage = "0.3"
+embedded-hal-async = { version = "1", optional = true }
+embedded-storage-async = { version = "0.4", optional = true }
 defmt = { version = "0.3", optional = true }
 
 [features]
@@ -31,8 +27,18 @@ readback-check = []
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 cortex-m-rt = "0.7.3"
 embedded-hal-bus = { version = "0.1.0", features = ["async"] }
-embassy-executor = { git = "https://github.com/embassy-rs/embassy.git", rev = "38a9271", features = ["arch-cortex-m", "executor-thread", "nightly", "integrated-timers"] }
-embassy-nrf = { git = "https://github.com/embassy-rs/embassy.git", rev = "38a9271", features = ["nrf9160-s", "unstable-pac", "time-driver-rtc1", "time"] }
+embassy-executor = { git = "https://github.com/embassy-rs/embassy.git", rev = "38a9271", features = [
+    "arch-cortex-m",
+    "executor-thread",
+    "nightly",
+    "integrated-timers",
+] }
+embassy-nrf = { git = "https://github.com/embassy-rs/embassy.git", rev = "38a9271", features = [
+    "nrf9160-s",
+    "unstable-pac",
+    "time-driver-rtc1",
+    "time",
+] }
 
 [[example]]
 name = "erase-write-read"

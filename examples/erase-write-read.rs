@@ -7,7 +7,7 @@ use embassy_nrf::gpio::{Level, Output, OutputDrive};
 use embassy_nrf::{bind_interrupts, peripherals::SERIAL2, spim};
 use embedded_hal_bus::spi::ExclusiveDevice;
 use embedded_storage_async::nor_flash::{NorFlash, ReadNorFlash};
-use w25q32jv::W25q32jv;
+use w25q_spi::{models::W25Q32, W25Q};
 
 bind_interrupts!(struct Irqs {
     UARTE2_SPIM2_SPIS2_TWIM2_TWIS2 => embassy_nrf::spim::InterruptHandler<SERIAL2>;
@@ -29,7 +29,7 @@ async fn main(_spawner: Spawner) {
     let ed = ExclusiveDevice::new_no_delay(spim, cs);
 
     // Create the flash driver instance
-    let mut flash = W25q32jv::new(ed, hold, wp).unwrap();
+    let mut flash = W25Q::new(W25Q32, ed, hold, wp).unwrap();
 
     // Embassy implements both eh-1 and eh-async, so we can use both blocking and async functions here
     flash.device_id_async().await.unwrap();
