@@ -23,13 +23,11 @@ async fn main(_spawner: Spawner) {
     // Create the bus and the pins
     let spim = spim::Spim::new(p.SERIAL2, Irqs, p.P0_21, p.P0_24, p.P0_22, config);
     let cs = Output::new(p.P0_25, Level::Low, OutputDrive::Standard);
-    let hold = Output::new(p.P0_20, Level::Low, OutputDrive::Standard);
-    let wp = Output::new(p.P0_23, Level::Low, OutputDrive::Standard);
 
     let ed = ExclusiveDevice::new_no_delay(spim, cs);
 
     // Create the flash driver instance
-    let mut flash = W25Q::new(W25Q32, ed, hold, wp).unwrap();
+    let mut flash = W25Q::new(W25Q32, ed);
 
     // Embassy implements both eh-1 and eh-async, so we can use both blocking and async functions here
     flash.device_id_async().await.unwrap();

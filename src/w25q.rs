@@ -1,21 +1,17 @@
 use super::*;
 use core::fmt::Debug;
-use embedded_hal::digital::OutputPin;
 use embedded_hal::spi::{Operation, SpiDevice};
 use embedded_storage::nor_flash::{MultiwriteNorFlash, NorFlash, ReadNorFlash};
 
-impl<MODEL, SPI, S: Debug, P: Debug, HOLD, WP> ReadNorFlash for W25Q<MODEL, SPI, HOLD, WP>
+impl<MODEL, SPI, S: Debug> ReadNorFlash for W25Q<MODEL, SPI>
 where
     MODEL: FlashModel,
     SPI: SpiDevice<Error = S>,
-    HOLD: OutputPin<Error = P>,
-    WP: OutputPin<Error = P>,
     S: Debug,
-    P: Debug,
 {
     const READ_SIZE: usize = 1;
 
-    fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<(), Error<S, P>> {
+    fn read(&mut self, offset: u32, bytes: &mut [u8]) -> Result<(), Error<S>> {
         self.read(offset, bytes)
     }
 
@@ -24,49 +20,40 @@ where
     }
 }
 
-impl<MODEL, SPI, S: Debug, P: Debug, HOLD, WP> NorFlash for W25Q<MODEL, SPI, HOLD, WP>
+impl<MODEL, SPI, S: Debug> NorFlash for W25Q<MODEL, SPI>
 where
     MODEL: FlashModel,
     SPI: SpiDevice<Error = S>,
-    HOLD: OutputPin<Error = P>,
-    WP: OutputPin<Error = P>,
     S: Debug,
-    P: Debug,
 {
     const WRITE_SIZE: usize = 1;
 
     const ERASE_SIZE: usize = MODEL::SECTOR_SIZE as usize;
 
-    fn erase(&mut self, from: u32, to: u32) -> Result<(), Error<S, P>> {
+    fn erase(&mut self, from: u32, to: u32) -> Result<(), Error<S>> {
         self.erase_range(from, to)
     }
 
-    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), Error<S, P>> {
+    fn write(&mut self, offset: u32, bytes: &[u8]) -> Result<(), Error<S>> {
         self.write(offset, bytes)
     }
 }
 
-impl<MODEL, SPI, S: Debug, P: Debug, HOLD, WP> MultiwriteNorFlash for W25Q<MODEL, SPI, HOLD, WP>
+impl<MODEL, SPI, S: Debug> MultiwriteNorFlash for W25Q<MODEL, SPI>
 where
     MODEL: FlashModel,
     SPI: SpiDevice<Error = S>,
-    HOLD: OutputPin<Error = P>,
-    WP: OutputPin<Error = P>,
     S: Debug,
-    P: Debug,
 {
 }
 
-impl<MODEL, SPI, S: Debug, P: Debug, HOLD, WP> W25Q<MODEL, SPI, HOLD, WP>
+impl<MODEL, SPI, S: Debug> W25Q<MODEL, SPI>
 where
     MODEL: FlashModel,
     SPI: SpiDevice<Error = S>,
-    HOLD: OutputPin<Error = P>,
-    WP: OutputPin<Error = P>,
     S: Debug,
-    P: Debug,
 {
-    fn read_status_register(&mut self) -> Result<u8, Error<S, P>> {
+    fn read_status_register(&mut self) -> Result<u8, Error<S>> {
         let mut buf: [u8; 2] = [0; 2];
         buf[0] = Command::ReadStatusRegister1 as u8;
 
@@ -79,16 +66,16 @@ where
 
     /// The flash chip is unable to perform new commands while it is still working on a previous one. Especially erases take a long time.
     /// This function returns true while the chip is unable to respond to commands (with the exception of the busy command).
-    fn busy(&mut self) -> Result<bool, Error<S, P>> {
+    fn busy(&mut self) -> Result<bool, Error<S>> {
         Ok((self.read_status_register()? & 0x01) != 0)
     }
 
-    fn write_enabled(&mut self) -> Result<bool, Error<S, P>> {
+    fn write_enabled(&mut self) -> Result<bool, Error<S>> {
         Ok((self.read_status_register()? & 0x02) != 0)
     }
 
     /// Request the 64 bit id that is unique to this chip.
-    pub fn device_id(&mut self) -> Result<[u8; 8], Error<S, P>> {
+    pub fn device_id(&mut self) -> Result<[u8; 8], Error<S>> {
         let mut buf: [u8; 13] = [0; 13];
         buf[0] = Command::UniqueId as u8;
 
@@ -100,7 +87,7 @@ where
     }
 
     /// Reset the chip
-    pub fn reset(&mut self) -> Result<(), Error<S, P>> {
+    pub fn reset(&mut self) -> Result<(), Error<S>> {
         self.spi
             .write(&[Command::EnableReset as u8])
             .map_err(Error::SpiError)?;
@@ -117,7 +104,7 @@ where
     /// # Arguments
     /// * `address` - Address where the first byte of the buf will be read.
     /// * `buf` - Slice that is going to be filled with the read bytes.
-    pub fn read(&mut self, address: u32, buf: &mut [u8]) -> Result<(), Error<S, P>> {
+    pub fn read(&mut self, address: u32, buf: &mut [u8]) -> Result<(), Error<S>> {
         if address + buf.len() as u32 > MODEL::CAPACITY {
             return Err(Error::OutOfBounds);
         }
@@ -135,7 +122,7 @@ where
     /// Sets the enable_write flag on the flash chip to true.
     /// Writes and erases to the chip only have effect when this flag is true.
     /// Each write and erase clears the flag, requiring it to be set to true again for the next command.
-    fn enable_write(&mut self) -> Result<(), Error<S, P>> {
+    fn enable_write(&mut self) -> Result<(), Error<S>> {
         self.spi
             .write(&[Command::WriteEnable as u8])
             .map_err(Error::SpiError)?;
@@ -153,7 +140,7 @@ where
     /// # Arguments
     /// * `address` - Address where the first byte of the buf will be written.
     /// * `buf` - Slice of bytes that will be written.
-    pub fn write(&mut self, mut address: u32, mut buf: &[u8]) -> Result<(), Error<S, P>> {
+    pub fn write(&mut self, mut address: u32, mut buf: &[u8]) -> Result<(), Error<S>> {
         if address + buf.len() as u32 > MODEL::CAPACITY {
             return Err(Error::OutOfBounds);
         }
@@ -180,7 +167,7 @@ where
     }
 
     /// Execute a write on a single page
-    fn write_page(&mut self, address: u32, buf: &[u8]) -> Result<(), Error<S, P>> {
+    fn write_page(&mut self, address: u32, buf: &[u8]) -> Result<(), Error<S>> {
         // We don't support wrapping writes. They're scary
         if (address & 0x000000FF) + buf.len() as u32 > MODEL::PAGE_SIZE {
             return Err(Error::OutOfBounds);
@@ -204,7 +191,7 @@ where
         Ok(())
     }
 
-    fn readback_check(&mut self, mut address: u32, data: &[u8]) -> Result<(), Error<S, P>> {
+    fn readback_check(&mut self, mut address: u32, data: &[u8]) -> Result<(), Error<S>> {
         const CHUNK_SIZE: usize = 64;
 
         let mut buf = [0; CHUNK_SIZE];
@@ -230,7 +217,7 @@ where
     /// # Arguments
     /// * `start_address` - Address of the first byte of the start of the range of sectors that need to be erased.
     /// * `end_address` - Address of the first byte of the end of the range of sectors that need to be erased.
-    pub fn erase_range(&mut self, start_address: u32, end_address: u32) -> Result<(), Error<S, P>> {
+    pub fn erase_range(&mut self, start_address: u32, end_address: u32) -> Result<(), Error<S>> {
         if start_address % (MODEL::SECTOR_SIZE) != 0 {
             return Err(Error::NotAligned);
         }
@@ -257,7 +244,7 @@ where
     ///
     /// # Arguments
     /// * `index` - the index of the sector that needs to be erased. The address of the first byte of the sector is the provided index * SECTOR_SIZE.
-    pub fn erase_sector(&mut self, index: u32) -> Result<(), Error<S, P>> {
+    pub fn erase_sector(&mut self, index: u32) -> Result<(), Error<S>> {
         if index >= MODEL::N_SECTORS {
             return Err(Error::OutOfBounds);
         }
@@ -285,7 +272,7 @@ where
     ///
     /// # Arguments
     /// * `index` - the index of the block that needs to be erased. The address of the first byte of the block is the provided index * BLOCK_32K_SIZE.
-    pub fn erase_block_32k(&mut self, index: u32) -> Result<(), Error<S, P>> {
+    pub fn erase_block_32k(&mut self, index: u32) -> Result<(), Error<S>> {
         if index >= MODEL::N_BLOCKS_32K {
             return Err(Error::OutOfBounds);
         }
@@ -313,7 +300,7 @@ where
     ///
     /// # Arguments
     /// * `index` - the index of the block that needs to be erased. The address of the first byte of the block is the provided index * BLOCK_64K_SIZE.
-    pub fn erase_block_64k(&mut self, index: u32) -> Result<(), Error<S, P>> {
+    pub fn erase_block_64k(&mut self, index: u32) -> Result<(), Error<S>> {
         if index >= MODEL::N_BLOCKS_64K {
             return Err(Error::OutOfBounds);
         }
@@ -339,7 +326,7 @@ where
 
     /// Erases all sectors on the flash chip.
     /// This is a very expensive operation.
-    pub fn erase_chip(&mut self) -> Result<(), Error<S, P>> {
+    pub fn erase_chip(&mut self) -> Result<(), Error<S>> {
         self.enable_write()?;
 
         self.spi
@@ -359,7 +346,7 @@ where
 
     /// Puts the chip into power down mode.
     /// While in the power-down state, only the Release Power-down/Device ID (0xAB) instruction will be recognized. This instruction restores the device to normal operation. All other instructions are ignored.
-    pub fn enable_power_down_mode(&mut self) -> Result<(), Error<S, P>> {
+    pub fn enable_power_down_mode(&mut self) -> Result<(), Error<S>> {
         self.spi
             .write(&[Command::PowerDown as u8])
             .map_err(Error::SpiError)?;
@@ -369,7 +356,7 @@ where
 
     /// Releases the chip from power down mode.
     /// Restores operation from power down mode by reading the deviceID from the device.
-    pub fn disable_power_down_mode(&mut self) -> Result<(), Error<S, P>> {
+    pub fn disable_power_down_mode(&mut self) -> Result<(), Error<S>> {
         self.spi
             .write(&[Command::ReleasePowerDown as u8])
             .map_err(Error::SpiError)?;
